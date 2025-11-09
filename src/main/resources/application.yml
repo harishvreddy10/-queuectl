@@ -1,0 +1,143 @@
+# QueueCTL Application Configuration
+
+spring:
+  application:
+    name: queuectl
+  
+  # Disable web server for CLI usage
+  main:
+    web-application-type: none
+  
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/queuectl?retryWrites=false
+      auto-index-creation: true
+      
+  # Jackson JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+# QueueCTL Specific Configuration
+queuectl:
+  # Worker Configuration
+  workers:
+    max-workers: 5
+    poll-interval: 1s
+    shutdown-timeout: 30s
+    
+  # Retry Configuration
+  retry:
+    max-retries: 3
+    base-delay: 1s
+    max-delay: 300s
+    
+  # Job Configuration
+  jobs:
+    default-timeout: 30m
+    cleanup-completed-after: 7d
+    cleanup-failed-after: 30d
+    
+  # MongoDB GridFS for job outputs
+  storage:
+    output-collection: job_outputs
+    max-output-size: 100MB
+    
+  # Web Dashboard Configuration (Bonus Feature)
+  web:
+    enabled: true
+    port: 8085
+    context-path: /dashboard
+
+# Actuator Configuration for Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.queuectl: INFO
+    org.springframework.data.mongodb: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/queuectl.log
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+queuectl:
+  workers:
+    max-workers: 2
+  web:
+    enabled: true
+    
+logging:
+  level:
+    com.queuectl: DEBUG
+    root: INFO
+
+---
+# Test Profile (In-Memory MongoDB for Demo)
+spring:
+  config:
+    activate:
+      on-profile: test
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/queuectl_test
+      auto-index-creation: true
+
+queuectl:
+  workers:
+    max-workers: 2
+  retry:
+    max-retries: 2
+    
+logging:
+  level:
+    com.queuectl: DEBUG
+    root: INFO
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+      
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/queuectl_prod}
+
+queuectl:
+  workers:
+    max-workers: ${MAX_WORKERS:10}
+  retry:
+    max-retries: ${MAX_RETRIES:5}
+  web:
+    enabled: ${WEB_DASHBOARD_ENABLED:false}
+
+logging:
+  level:
+    com.queuectl: INFO
+    root: WARN
